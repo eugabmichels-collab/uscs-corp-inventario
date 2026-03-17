@@ -15,6 +15,7 @@ import {
   Settings,
   LogOut,
   ChevronDown,
+  MessageSquarePlus,
 } from "lucide-react"
 
 import {
@@ -67,6 +68,11 @@ const mainNavItems = [
     title: "Manutenção",
     url: "/manutencao",
     icon: Wrench,
+  },
+  {
+    title: "Solicitações",
+    url: "/solicitacoes",
+    icon: MessageSquarePlus,
   },
 ]
 

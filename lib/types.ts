@@ -222,6 +222,60 @@ export interface LabMap {
   updatedAt: string
 }
 
+// Solicitações / Task Request Types
+export type TaskPriority = "Crítica" | "Alta" | "Média" | "Baixa"
+
+export type TaskStatus =
+  | "Aberta"
+  | "Em análise"
+  | "Em andamento"
+  | "Concluída"
+  | "Cancelada"
+
+export type TaskCategory =
+  | "Verificação de software"
+  | "Verificação de hardware"
+  | "Abertura de sala"
+  | "Fechamento de sala"
+  | "Configuração de equipamento"
+  | "Limpeza/Organização"
+  | "Outro"
+
+export interface TaskAssignee {
+  userId: string
+  userName: string
+  assignedAt: string
+  completedAt: string | null
+}
+
+export interface TaskActivity {
+  id: string
+  userId: string
+  userName: string
+  action: string
+  description: string
+  attachment: string | null
+  createdAt: string
+}
+
+export interface TaskRequest {
+  id: string
+  title: string
+  description: string
+  category: TaskCategory
+  priority: TaskPriority
+  status: TaskStatus
+  laboratories: Laboratory[]
+  requesterId: string
+  requesterName: string
+  requesterRole: UserRole
+  assignees: TaskAssignee[]
+  activities: TaskActivity[]
+  createdAt: string
+  updatedAt: string
+  completedAt: string | null
+}
+
 // Dashboard KPIs
 export interface DashboardStats {
   totalItems: number
