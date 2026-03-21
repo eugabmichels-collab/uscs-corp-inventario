@@ -1,6 +1,9 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import { useForm, Controller } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import {
   Users,
   Search,
@@ -57,43 +60,28 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { mockUsers } from "@/lib/mock-data"
+import type { User as SystemUser } from "@/lib/types"
+import { getRoleBadge, getUserStatusBadge } from "@/components/badges"
+import { formatDateTime, getInitials } from "@/lib/format"
+import { toast } from "sonner"
 
-function getRoleBadge(role: string) {
-  switch (role) {
-    case "Administrador":
-      return <Badge className="bg-destructive/15 text-destructive border-destructive/30">Administrador</Badge>
-    case "Professor":
-      return <Badge className="bg-info/15 text-info border-info/30">Professor</Badge>
-    case "Técnico/Laboratorista":
-      return <Badge className="bg-warning/15 text-warning border-warning/30">Técnico/Lab.</Badge>
-    case "Monitor":
-      return <Badge className="bg-success/15 text-success border-success/30">Monitor</Badge>
-    case "Visualizador":
-      return <Badge variant="secondary">Visualizador</Badge>
-    default:
-      return <Badge variant="outline">{role}</Badge>
-  }
-}
+const getStatusBadge = getUserStatusBadge
 
-function getStatusBadge(status: string) {
-  switch (status) {
-    case "Ativo":
-      return <Badge className="bg-success/15 text-success border-success/30">Ativo</Badge>
-    case "Inativo":
-      return <Badge variant="outline" className="text-muted-foreground">Inativo</Badge>
-    default:
-      return <Badge variant="outline">{status}</Badge>
-  }
-}
+const newUserSchema = z.object({
+  name: z.string().min(1, "Informe o nome completo."),
+  email: z
+    .string()
+    .min(1, "Informe o e-mail.")
+    .email("Informe um e-mail válido.")
+    .refine(
+      (val) => val.endsWith("@uscs.edu.br") || val.endsWith("@uscsscs.edu.br"),
+      "Utilize um e-mail institucional (@uscs.edu.br)."
+    ),
+  role: z.string().min(1, "Selecione o perfil."),
+  laboratory: z.string().min(1, "Selecione o laboratório."),
+})
 
-function formatDateTime(dateStr: string) {
-  const date = new Date(dateStr)
-  return `${date.toLocaleDateString("pt-BR")} ${date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
-}
-
-function getInitials(name: string) {
-  return name.split(" ").map((n) => n[0]).filter(Boolean).slice(0, 2).join("").toUpperCase()
-}
+type NewUserFormData = z.infer<typeof newUserSchema>
 
 interface Filters {
   search: string
@@ -110,7 +98,32 @@ const initialFilters: Filters = {
 export default function UsuariosPage() {
   const [filters, setFilters] = useState<Filters>(initialFilters)
   const [currentPage, setCurrentPage] = useState(1)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<SystemUser | null>(null)
+  const [detailOpen, setDetailOpen] = useState(false)
   const itemsPerPage = 10
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors },
+  } = useForm<NewUserFormData>({
+    resolver: zodResolver(newUserSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      role: "",
+      laboratory: "",
+    },
+  })
+
+  const onSubmitUser = (data: NewUserFormData) => {
+    console.log("Novo usuário:", data)
+    reset()
+    setDialogOpen(false)
+  }
 
   const filteredUsers = useMemo(() => {
     let result = [...mockUsers]
@@ -164,7 +177,7 @@ export default function UsuariosPage() {
               Gerencie os usuários e permissões do sistema
             </p>
           </div>
-          <Dialog>
+          <Dialog open={dialogOpen} onOpenChange={(open) => { reset(); setDialogOpen(open); }}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 size-4" />
@@ -178,50 +191,79 @@ export default function UsuariosPage() {
                   Cadastre um novo usuário no sistema.
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Nome completo</Label>
-                  <Input id="name" placeholder="Nome do usuário" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="email">E-mail</Label>
-                  <Input id="email" type="email" placeholder="email@uscs.edu.br" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleSubmit(onSubmitUser)}>
+                <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="role">Perfil</Label>
-                    <Select>
-                      <SelectTrigger id="role">
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Administrador">Administrador</SelectItem>
-                        <SelectItem value="Professor">Professor</SelectItem>
-                        <SelectItem value="Técnico/Laboratorista">Técnico/Lab.</SelectItem>
-                        <SelectItem value="Monitor">Monitor</SelectItem>
-                        <SelectItem value="Visualizador">Visualizador</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="name">Nome completo</Label>
+                    <Input
+                      id="name"
+                      placeholder="Nome do usuário"
+                      {...register("name")}
+                      className={errors.name ? "border-destructive focus-visible:ring-destructive" : ""}
+                    />
+                    {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="lab">Laboratório</Label>
-                    <Select>
-                      <SelectTrigger id="lab">
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Todos">Todos</SelectItem>
-                        <SelectItem value="Laboratório de Física">Lab. Física</SelectItem>
-                        <SelectItem value="Laboratório de Robótica">Lab. Robótica</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="email">E-mail</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="email@uscs.edu.br"
+                      {...register("email")}
+                      className={errors.email ? "border-destructive focus-visible:ring-destructive" : ""}
+                    />
+                    {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="role">Perfil</Label>
+                      <Controller
+                        control={control}
+                        name="role"
+                        render={({ field }) => (
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <SelectTrigger id="role" className={errors.role ? "border-destructive focus-visible:ring-destructive" : ""}>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Administrador">Administrador</SelectItem>
+                              <SelectItem value="Professor">Professor</SelectItem>
+                              <SelectItem value="Técnico/Laboratorista">Técnico/Lab.</SelectItem>
+                              <SelectItem value="Monitor">Monitor</SelectItem>
+                              <SelectItem value="Visualizador">Visualizador</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      {errors.role && <p className="text-sm text-destructive">{errors.role.message}</p>}
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="lab">Laboratório</Label>
+                      <Controller
+                        control={control}
+                        name="laboratory"
+                        render={({ field }) => (
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <SelectTrigger id="lab" className={errors.laboratory ? "border-destructive focus-visible:ring-destructive" : ""}>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Todos">Todos</SelectItem>
+                              <SelectItem value="Laboratório de Física">Lab. Física</SelectItem>
+                              <SelectItem value="Laboratório de Robótica">Lab. Robótica</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      {errors.laboratory && <p className="text-sm text-destructive">{errors.laboratory.message}</p>}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline">Cancelar</Button>
-                <Button>Cadastrar Usuário</Button>
-              </DialogFooter>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => { reset(); setDialogOpen(false); }}>Cancelar</Button>
+                  <Button type="submit">Cadastrar Usuário</Button>
+                </DialogFooter>
+              </form>
             </DialogContent>
           </Dialog>
         </div>
@@ -386,26 +428,34 @@ export default function UsuariosPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Ações</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => { setSelectedUser(user); setDetailOpen(true); }}>
                               <Eye className="mr-2 size-4" />
                               Ver detalhes
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              toast.info(`Edição do usuário "${user.name}" em breve.`)
+                            }}>
                               <Edit className="mr-2 size-4" />
                               Editar
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              toast.info(`Alteração de perfil do usuário "${user.name}" em breve.`)
+                            }}>
                               <Shield className="mr-2 size-4" />
                               Alterar perfil
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             {user.status === "Ativo" ? (
-                              <DropdownMenuItem className="text-destructive">
+                              <DropdownMenuItem className="text-destructive" onClick={() => {
+                                toast.success(`Usuário "${user.name}" desativado com sucesso.`)
+                              }}>
                                 <UserX className="mr-2 size-4" />
                                 Desativar
                               </DropdownMenuItem>
                             ) : (
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                toast.success(`Usuário "${user.name}" reativado com sucesso.`)
+                              }}>
                                 <UserCheck className="mr-2 size-4" />
                                 Reativar
                               </DropdownMenuItem>
@@ -454,6 +504,63 @@ export default function UsuariosPage() {
             )}          </CardContent>
         </Card>
       </div>
+
+      {/* User Detail Dialog */}
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Usuário</DialogTitle>
+            <DialogDescription>
+              Informações completas do usuário
+            </DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-6 py-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <Avatar className="size-12">
+                    <AvatarFallback className="bg-primary/10 text-primary">
+                      {getInitials(selectedUser.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-semibold">{selectedUser.name}</p>
+                    <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                  </div>
+                </div>
+                {getStatusBadge(selectedUser.status)}
+              </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Perfil</p>
+                  <div className="mt-1">{getRoleBadge(selectedUser.role)}</div>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Laboratório</p>
+                  <p className="text-sm mt-1">
+                    {selectedUser.linkedLaboratory === "Todos"
+                      ? "Todos"
+                      : selectedUser.linkedLaboratory === "Laboratório de Física"
+                      ? "Lab. Física"
+                      : "Lab. Robótica"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Último Acesso</p>
+                  <p className="text-sm mt-1">{formatDateTime(selectedUser.lastAccess)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Cadastrado em</p>
+                  <p className="text-sm mt-1">{formatDateTime(selectedUser.createdAt)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/tooltip"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
+import { FieldWithTooltip } from "@/components/ui/field-with-tooltip"
 
 const categories = [
   "Equipamento de medição",
@@ -77,36 +78,6 @@ const fundingSources = [
   "Convênio",
   "Outro",
 ]
-
-interface FieldWithTooltipProps {
-  label: string
-  tooltip: string
-  required?: boolean
-  children: React.ReactNode
-}
-
-function FieldWithTooltip({ label, tooltip, required, children }: FieldWithTooltipProps) {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <Label className={required ? "after:content-['*'] after:ml-0.5 after:text-destructive" : ""}>
-          {label}
-        </Label>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Info className="size-4 text-muted-foreground cursor-help" />
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs">
-              <p>{tooltip}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-      {children}
-    </div>
-  )
-}
 
 export default function NewItemPage() {
   const router = useRouter()

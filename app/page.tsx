@@ -2,6 +2,9 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import { Eye, EyeOff, GraduationCap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,18 +12,40 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
+const loginSchema = z.object({
+  email: z
+    .string()
+    .min(1, "O e-mail é obrigatório.")
+    .email("Informe um e-mail válido.")
+    .refine(
+      (val) => val.endsWith("@uscs.edu.br") || val.endsWith("@uscsscs.edu.br"),
+      "Utilize seu e-mail institucional (@uscs.edu.br)."
+    ),
+  password: z
+    .string()
+    .min(1, "A senha é obrigatória.")
+    .min(6, "A senha deve ter no mínimo 6 caracteres."),
+})
+
+type LoginFormData = z.infer<typeof loginSchema>
+
 export default function LoginPage() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  })
+
+  const onSubmit = async (data: LoginFormData) => {
     // Simulate login
-    setTimeout(() => {
-      router.push("/dashboard")
-    }, 1000)
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    router.push("/dashboard")
   }
 
   return (
@@ -95,16 +120,19 @@ export default function LoginPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">E-mail institucional</Label>
                   <Input
                     id="email"
                     type="email"
                     placeholder="seu.email@uscs.edu.br"
-                    required
-                    className="h-11"
+                    className={`h-11 ${errors.email ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                    {...register("email")}
                   />
+                  {errors.email && (
+                    <p className="text-sm text-destructive">{errors.email.message}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -123,8 +151,8 @@ export default function LoginPage() {
                       id="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="Digite sua senha"
-                      required
-                      className="h-11 pr-10"
+                      className={`h-11 pr-10 ${errors.password ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                      {...register("password")}
                     />
                     <Button
                       type="button"
@@ -143,6 +171,9 @@ export default function LoginPage() {
                       </span>
                     </Button>
                   </div>
+                  {errors.password && (
+                    <p className="text-sm text-destructive">{errors.password.message}</p>
+                  )}
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -158,9 +189,9 @@ export default function LoginPage() {
                 <Button
                   type="submit"
                   className="w-full h-11"
-                  disabled={isLoading}
+                  disabled={isSubmitting}
                 >
-                  {isLoading ? "Entrando..." : "Entrar no Sistema"}
+                  {isSubmitting ? "Entrando..." : "Entrar no Sistema"}
                 </Button>
               </form>
 
