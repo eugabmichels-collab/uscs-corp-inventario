@@ -1,0 +1,174 @@
+# ============================================
+# CD - Deploy to GitHub Pages
+# ============================================
+# Branch mapping:
+#   sandbox  → DEV  (deploy em /dev/)
+#   release  → HML  (deploy em /hml/)
+#   master   → PRD  (deploy na raiz /)
+#
+# Todas as versões ficam em GitHub Pages
+# com subpastas por ambiente.
+# ============================================
+
+name: CD
+
+on:
+  push:
+    branches: [master, release, sandbox]
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+env:
+  NODE_VERSION: 20
+
+jobs:
+  # ==========================================
+  # Determinar ambiente baseado na branch
+  # ==========================================
+  setup:
+    name: Setup Environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+      subdirectory: ${{ steps.env.outputs.subdirectory }}
+      base_path: ${{ steps.env.outputs.base_path }}
+    steps:
+      - name: Determine environment
+        id: env
+        run: |
+          REPO_NAME="${{ github.event.repository.name }}"
+          if [[ "${{ github.ref_name }}" == "master" ]]; then
+            echo "environment=prd" >> $GITHUB_OUTPUT
+            echo "subdirectory=." >> $GITHUB_OUTPUT
+            echo "base_path=/${REPO_NAME}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref_name }}" == "release" ]]; then
+            echo "environment=hml" >> $GITHUB_OUTPUT
+            echo "subdirectory=hml" >> $GITHUB_OUTPUT
+            echo "base_path=/${REPO_NAME}/hml" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref_name }}" == "sandbox" ]]; then
+            echo "environment=dev" >> $GITHUB_OUTPUT
+            echo "subdirectory=dev" >> $GITHUB_OUTPUT
+            echo "base_path=/${REPO_NAME}/dev" >> $GITHUB_OUTPUT
+          fi
+
+  # ==========================================
+  # Build da aplicação
+  # ==========================================
+  build:
+    name: Build (${{ needs.setup.outputs.environment }})
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout current branch
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        env:
+          NEXT_PUBLIC_BASE_PATH: ${{ needs.setup.outputs.base_path }}
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+        run: pnpm build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ needs.setup.outputs.environment }}
+          path: out/
+          retention-days: 1
+
+  # ==========================================
+  # Montar site completo e publicar
+  # ==========================================
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: [setup, build]
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout gh-pages data
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages-data
+        continue-on-error: true
+
+      - name: Prepare site directory
+        run: |
+          mkdir -p site
+
+          # Copiar conteúdo existente do gh-pages (se existir)
+          if [ -d "gh-pages-data" ] && [ "$(ls -A gh-pages-data 2>/dev/null)" ]; then
+            cp -r gh-pages-data/* site/ 2>/dev/null || true
+            rm -rf site/.git
+          fi
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-${{ needs.setup.outputs.environment }}
+          path: build-output/
+
+      - name: Place build in correct subdirectory
+        run: |
+          SUBDIR="${{ needs.setup.outputs.subdirectory }}"
+          ENV="${{ needs.setup.outputs.environment }}"
+
+          if [[ "$SUBDIR" == "." ]]; then
+            # PRD: copiar para raiz, preservando subpastas de outros ambientes
+            mkdir -p /tmp/env-backup
+            [ -d "site/dev" ] && cp -r site/dev /tmp/env-backup/dev
+            [ -d "site/hml" ] && cp -r site/hml /tmp/env-backup/hml
+
+            rm -rf site/*
+            cp -r build-output/* site/
+
+            [ -d "/tmp/env-backup/dev" ] && cp -r /tmp/env-backup/dev site/dev
+            [ -d "/tmp/env-backup/hml" ] && cp -r /tmp/env-backup/hml site/hml
+          else
+            # DEV/HML: copiar para subpasta
+            rm -rf "site/${SUBDIR}"
+            mkdir -p "site/${SUBDIR}"
+            cp -r build-output/* "site/${SUBDIR}/"
+          fi
+
+          # Necessário para GitHub Pages processar _next/ corretamente
+          touch site/.nojekyll
+
+          echo "=== Site structure ==="
+          ls -la site/
+          echo ""
+          echo "=== Deployed ${ENV} to /${SUBDIR} ==="
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
