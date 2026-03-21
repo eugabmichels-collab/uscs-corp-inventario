@@ -1,6 +1,9 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import { useForm, Controller } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import Link from "next/link"
 import {
   MessageSquarePlus,
@@ -77,86 +80,22 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { mockTaskRequests } from "@/lib/mock-data"
 import type { TaskRequest, TaskPriority, TaskStatus, Laboratory } from "@/lib/types"
 import { toast } from "sonner"
+import { getTaskPriorityBadge, getTaskStatusBadge, getTaskStatusIcon } from "@/components/badges"
+import { formatDateTime, formatRelativeTime, getInitials } from "@/lib/format"
 
-function getPriorityBadge(priority: TaskPriority) {
-  switch (priority) {
-    case "Crítica":
-      return <Badge className="bg-destructive/15 text-destructive border-destructive/30 hover:bg-destructive/20">Crítica</Badge>
-    case "Alta":
-      return <Badge className="bg-warning/15 text-warning border-warning/30 hover:bg-warning/20">Alta</Badge>
-    case "Média":
-      return <Badge className="bg-info/15 text-info border-info/30 hover:bg-info/20">Média</Badge>
-    case "Baixa":
-      return <Badge variant="secondary">Baixa</Badge>
-    default:
-      return <Badge variant="outline">{priority}</Badge>
-  }
-}
+const getPriorityBadge = getTaskPriorityBadge
+const getStatusBadge = getTaskStatusBadge
+const getStatusIcon = getTaskStatusIcon
 
-function getStatusBadge(status: TaskStatus) {
-  switch (status) {
-    case "Aberta":
-      return <Badge className="bg-info/15 text-info border-info/30 hover:bg-info/20">Aberta</Badge>
-    case "Em análise":
-      return <Badge className="bg-warning/15 text-warning border-warning/30 hover:bg-warning/20">Em análise</Badge>
-    case "Em andamento":
-      return <Badge className="bg-chart-4/15 text-chart-4 border-chart-4/30 hover:bg-chart-4/20">Em andamento</Badge>
-    case "Concluída":
-      return <Badge className="bg-success/15 text-success border-success/30 hover:bg-success/20">Concluída</Badge>
-    case "Cancelada":
-      return <Badge variant="secondary">Cancelada</Badge>
-    default:
-      return <Badge variant="outline">{status}</Badge>
-  }
-}
+const newTaskSchema = z.object({
+  title: z.string().min(1, "Informe o título da solicitação."),
+  description: z.string().optional(),
+  category: z.string().min(1, "Selecione uma categoria."),
+  priority: z.string().min(1, "Selecione a prioridade."),
+  laboratories: z.array(z.string()).min(1, "Selecione ao menos um laboratório."),
+})
 
-function getStatusIcon(status: TaskStatus) {
-  switch (status) {
-    case "Aberta":
-      return <CircleDot className="size-4 text-info" />
-    case "Em análise":
-      return <Search className="size-4 text-warning" />
-    case "Em andamento":
-      return <Loader2 className="size-4 text-chart-4" />
-    case "Concluída":
-      return <CheckCircle2 className="size-4 text-success" />
-    case "Cancelada":
-      return <X className="size-4 text-muted-foreground" />
-  }
-}
-
-function formatDateTime(dateStr: string) {
-  return new Date(dateStr).toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-}
-
-function formatRelativeTime(dateStr: string) {
-  const now = new Date()
-  const date = new Date(dateStr)
-  const diffMs = now.getTime() - date.getTime()
-  const diffMin = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMin / 60)
-  const diffDays = Math.floor(diffHours / 24)
-
-  if (diffMin < 1) return "agora"
-  if (diffMin < 60) return `há ${diffMin}min`
-  if (diffHours < 24) return `há ${diffHours}h`
-  return `há ${diffDays}d`
-}
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter((_, i, arr) => i === 0 || i === arr.length - 1)
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-}
+type NewTaskFormData = z.infer<typeof newTaskSchema>
 
 interface Filters {
   search: string
@@ -178,14 +117,31 @@ export default function SolicitacoesPage() {
   const [filters, setFilters] = useState<Filters>(initialFilters)
   const [currentPage, setCurrentPage] = useState(1)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [newTask, setNewTask] = useState({
-    title: "",
-    description: "",
-    category: "",
-    priority: "",
-    laboratories: [] as string[],
-  })
   const itemsPerPage = 10
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors },
+  } = useForm<NewTaskFormData>({
+    resolver: zodResolver(newTaskSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      category: "",
+      priority: "",
+      laboratories: [],
+    },
+  })
+
+  const onSubmitTask = (data: NewTaskFormData) => {
+    console.log("Nova solicitação:", data)
+    toast.success("Solicitação criada com sucesso!")
+    reset()
+    setIsCreateOpen(false)
+  }
 
   const filteredTasks = useMemo(() => {
     let result = [...mockTaskRequests]
@@ -251,25 +207,6 @@ export default function SolicitacoesPage() {
     completed: mockTaskRequests.filter((t) => t.status === "Concluída").length,
   }), [])
 
-  const handleCreateTask = () => {
-    if (!newTask.title || !newTask.category || !newTask.priority || newTask.laboratories.length === 0) {
-      toast.error("Preencha todos os campos obrigatórios.")
-      return
-    }
-    toast.success("Solicitação criada com sucesso!")
-    setIsCreateOpen(false)
-    setNewTask({ title: "", description: "", category: "", priority: "", laboratories: [] })
-  }
-
-  const toggleLab = (lab: string) => {
-    setNewTask((prev) => ({
-      ...prev,
-      laboratories: prev.laboratories.includes(lab)
-        ? prev.laboratories.filter((l) => l !== lab)
-        : [...prev.laboratories, lab],
-    }))
-  }
-
   return (
     <>
       <Topbar
@@ -288,7 +225,7 @@ export default function SolicitacoesPage() {
               Gerencie solicitações de verificação e atividades para os laboratórios
             </p>
           </div>
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <Dialog open={isCreateOpen} onOpenChange={(open) => { reset(); setIsCreateOpen(open); }}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 size-4" />
@@ -302,95 +239,122 @@ export default function SolicitacoesPage() {
                   Crie uma nova solicitação para os monitores verificarem ou executarem nos laboratórios.
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="task-title">Título *</Label>
-                  <Input
-                    id="task-title"
-                    placeholder="Ex: Verificar software MATLAB nos PCs"
-                    value={newTask.title}
-                    onChange={(e) => setNewTask((prev) => ({ ...prev, title: e.target.value }))}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="task-desc">Descrição</Label>
-                  <Textarea
-                    id="task-desc"
-                    placeholder="Descreva detalhadamente o que precisa ser verificado ou executado..."
-                    rows={3}
-                    value={newTask.description}
-                    onChange={(e) => setNewTask((prev) => ({ ...prev, description: e.target.value }))}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleSubmit(onSubmitTask)}>
+                <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label>Categoria *</Label>
-                    <Select
-                      value={newTask.category}
-                      onValueChange={(value) => setNewTask((prev) => ({ ...prev, category: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Verificação de software">Verificação de software</SelectItem>
-                        <SelectItem value="Verificação de hardware">Verificação de hardware</SelectItem>
-                        <SelectItem value="Abertura de sala">Abertura de sala</SelectItem>
-                        <SelectItem value="Fechamento de sala">Fechamento de sala</SelectItem>
-                        <SelectItem value="Configuração de equipamento">Configuração de equipamento</SelectItem>
-                        <SelectItem value="Limpeza/Organização">Limpeza/Organização</SelectItem>
-                        <SelectItem value="Outro">Outro</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="task-title">Título *</Label>
+                    <Input
+                      id="task-title"
+                      placeholder="Ex: Verificar software MATLAB nos PCs"
+                      {...register("title")}
+                      className={errors.title ? "border-destructive focus-visible:ring-destructive" : ""}
+                    />
+                    {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
                   </div>
                   <div className="grid gap-2">
-                    <Label>Prioridade *</Label>
-                    <Select
-                      value={newTask.priority}
-                      onValueChange={(value) => setNewTask((prev) => ({ ...prev, priority: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Crítica">Crítica</SelectItem>
-                        <SelectItem value="Alta">Alta</SelectItem>
-                        <SelectItem value="Média">Média</SelectItem>
-                        <SelectItem value="Baixa">Baixa</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="task-desc">Descrição</Label>
+                    <Textarea
+                      id="task-desc"
+                      placeholder="Descreva detalhadamente o que precisa ser verificado ou executado..."
+                      rows={3}
+                      {...register("description")}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label>Categoria *</Label>
+                      <Controller
+                        control={control}
+                        name="category"
+                        render={({ field }) => (
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <SelectTrigger className={errors.category ? "border-destructive focus-visible:ring-destructive" : ""}>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Verificação de software">Verificação de software</SelectItem>
+                              <SelectItem value="Verificação de hardware">Verificação de hardware</SelectItem>
+                              <SelectItem value="Abertura de sala">Abertura de sala</SelectItem>
+                              <SelectItem value="Fechamento de sala">Fechamento de sala</SelectItem>
+                              <SelectItem value="Configuração de equipamento">Configuração de equipamento</SelectItem>
+                              <SelectItem value="Limpeza/Organização">Limpeza/Organização</SelectItem>
+                              <SelectItem value="Outro">Outro</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      {errors.category && <p className="text-sm text-destructive">{errors.category.message}</p>}
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Prioridade *</Label>
+                      <Controller
+                        control={control}
+                        name="priority"
+                        render={({ field }) => (
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <SelectTrigger className={errors.priority ? "border-destructive focus-visible:ring-destructive" : ""}>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Crítica">Crítica</SelectItem>
+                              <SelectItem value="Alta">Alta</SelectItem>
+                              <SelectItem value="Média">Média</SelectItem>
+                              <SelectItem value="Baixa">Baixa</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      {errors.priority && <p className="text-sm text-destructive">{errors.priority.message}</p>}
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Laboratórios *</Label>
+                    <Controller
+                      control={control}
+                      name="laboratories"
+                      render={({ field }) => (
+                        <div className="flex gap-4">
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              id="lab-fisica"
+                              checked={field.value.includes("Laboratório de Física")}
+                              onCheckedChange={(checked) => {
+                                const lab = "Laboratório de Física"
+                                field.onChange(
+                                  checked ? [...field.value, lab] : field.value.filter((l: string) => l !== lab)
+                                )
+                              }}
+                            />
+                            <Label htmlFor="lab-fisica" className="text-sm font-normal cursor-pointer">
+                              Lab. Física
+                            </Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              id="lab-robotica"
+                              checked={field.value.includes("Laboratório de Robótica")}
+                              onCheckedChange={(checked) => {
+                                const lab = "Laboratório de Robótica"
+                                field.onChange(
+                                  checked ? [...field.value, lab] : field.value.filter((l: string) => l !== lab)
+                                )
+                              }}
+                            />
+                            <Label htmlFor="lab-robotica" className="text-sm font-normal cursor-pointer">
+                              Lab. Robótica
+                            </Label>
+                          </div>
+                        </div>
+                      )}
+                    />
+                    {errors.laboratories && <p className="text-sm text-destructive">{errors.laboratories.message}</p>}
                   </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label>Laboratórios *</Label>
-                  <div className="flex gap-4">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="lab-fisica"
-                        checked={newTask.laboratories.includes("Laboratório de Física")}
-                        onCheckedChange={() => toggleLab("Laboratório de Física")}
-                      />
-                      <Label htmlFor="lab-fisica" className="text-sm font-normal cursor-pointer">
-                        Lab. Física
-                      </Label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="lab-robotica"
-                        checked={newTask.laboratories.includes("Laboratório de Robótica")}
-                        onCheckedChange={() => toggleLab("Laboratório de Robótica")}
-                      />
-                      <Label htmlFor="lab-robotica" className="text-sm font-normal cursor-pointer">
-                        Lab. Robótica
-                      </Label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancelar</Button>
-                <Button onClick={handleCreateTask}>Criar Solicitação</Button>
-              </DialogFooter>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => { reset(); setIsCreateOpen(false); }}>Cancelar</Button>
+                  <Button type="submit">Criar Solicitação</Button>
+                </DialogFooter>
+              </form>
             </DialogContent>
           </Dialog>
         </div>
@@ -669,7 +633,11 @@ export default function SolicitacoesPage() {
                                 </Link>
                               </DropdownMenuItem>
                               {task.status === "Aberta" && (
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  toast.success(`Solicitação "${task.title}" assumida com sucesso!`, {
+                                    description: "Agora você é o responsável por esta solicitação.",
+                                  })
+                                }}>
                                   <UserPlus className="mr-2 size-4" />
                                   Assumir solicitação
                                 </DropdownMenuItem>

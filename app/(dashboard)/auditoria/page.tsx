@@ -50,57 +50,11 @@ import {
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { mockAuditLogs } from "@/lib/mock-data"
+import { getAuditActionIcon, getAuditActionBadge } from "@/components/badges"
+import { formatDateTime } from "@/lib/format"
 
-function getActionIcon(action: string) {
-  switch (action) {
-    case "Criação":
-      return <Package className="size-4 text-success" />
-    case "Edição":
-      return <Edit className="size-4 text-info" />
-    case "Empréstimo":
-      return <ClipboardList className="size-4 text-warning" />
-    case "Devolução":
-      return <RotateCcw className="size-4 text-success" />
-    case "Manutenção":
-      return <Wrench className="size-4 text-info" />
-    case "Alteração de localização":
-      return <MapPin className="size-4 text-muted-foreground" />
-    case "Mudança de responsável":
-      return <UserCheck className="size-4 text-muted-foreground" />
-    case "Alteração de estado":
-    case "Alteração de condição":
-      return <AlertTriangle className="size-4 text-warning" />
-    case "Anexo adicionado":
-      return <Paperclip className="size-4 text-muted-foreground" />
-    default:
-      return <History className="size-4 text-muted-foreground" />
-  }
-}
-
-function getActionBadge(action: string) {
-  switch (action) {
-    case "Criação":
-      return <Badge className="bg-success/15 text-success border-success/30">Criação</Badge>
-    case "Edição":
-      return <Badge className="bg-info/15 text-info border-info/30">Edição</Badge>
-    case "Empréstimo":
-      return <Badge className="bg-warning/15 text-warning border-warning/30">Empréstimo</Badge>
-    case "Devolução":
-      return <Badge className="bg-success/15 text-success border-success/30">Devolução</Badge>
-    case "Manutenção":
-      return <Badge className="bg-info/15 text-info border-info/30">Manutenção</Badge>
-    case "Alteração de estado":
-    case "Alteração de condição":
-      return <Badge className="bg-warning/15 text-warning border-warning/30">{action}</Badge>
-    default:
-      return <Badge variant="secondary">{action}</Badge>
-  }
-}
-
-function formatDateTime(dateStr: string) {
-  const date = new Date(dateStr)
-  return `${date.toLocaleDateString("pt-BR")} ${date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
-}
+const getActionIcon = getAuditActionIcon
+const getActionBadge = getAuditActionBadge
 
 interface Filters {
   search: string
