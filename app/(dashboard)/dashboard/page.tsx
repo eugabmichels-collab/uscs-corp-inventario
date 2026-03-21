@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/table"
 import { mockDashboardStats, mockItems, mockLoans, mockMaintenances, mockAuditLogs } from "@/lib/mock-data"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from "recharts"
+import { getDashboardStatusBadge, getCriticalityBadge } from "@/components/badges"
 
 const kpiCards = [
   {
@@ -91,41 +92,7 @@ const labData = [
   { name: "Lab. Robótica", items: 8, fill: "var(--color-chart-2)" },
 ]
 
-function getStatusBadge(status: string) {
-  switch (status) {
-    case "Ativo":
-      return <Badge className="bg-success/15 text-success border-success/30 hover:bg-success/20">Ativo</Badge>
-    case "Atrasado":
-      return <Badge className="bg-destructive/15 text-destructive border-destructive/30 hover:bg-destructive/20">Atrasado</Badge>
-    case "Devolvido":
-      return <Badge variant="secondary">Devolvido</Badge>
-    case "Aberta":
-      return <Badge className="bg-warning/15 text-warning border-warning/30 hover:bg-warning/20">Aberta</Badge>
-    case "Em andamento":
-      return <Badge className="bg-info/15 text-info border-info/30 hover:bg-info/20">Em andamento</Badge>
-    case "Concluída":
-      return <Badge className="bg-success/15 text-success border-success/30 hover:bg-success/20">Concluída</Badge>
-    case "Aguardando peça":
-      return <Badge className="bg-warning/15 text-warning border-warning/30 hover:bg-warning/20">Aguardando peça</Badge>
-    default:
-      return <Badge variant="outline">{status}</Badge>
-  }
-}
-
-function getCriticalityBadge(criticality: string) {
-  switch (criticality) {
-    case "Crítica":
-      return <Badge className="bg-destructive/15 text-destructive border-destructive/30">Crítica</Badge>
-    case "Alta":
-      return <Badge className="bg-warning/15 text-warning border-warning/30">Alta</Badge>
-    case "Média":
-      return <Badge className="bg-info/15 text-info border-info/30">Média</Badge>
-    case "Baixa":
-      return <Badge variant="secondary">Baixa</Badge>
-    default:
-      return <Badge variant="outline">{criticality}</Badge>
-  }
-}
+const getStatusBadge = getDashboardStatusBadge
 
 export default function DashboardPage() {
   const overdueLoans = mockLoans.filter((l) => l.status === "Atrasado")

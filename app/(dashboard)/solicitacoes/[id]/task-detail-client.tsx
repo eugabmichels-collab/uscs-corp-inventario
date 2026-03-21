@@ -39,104 +39,12 @@ import {
 import { getTaskRequestById } from "@/lib/mock-data"
 import type { TaskPriority, TaskStatus } from "@/lib/types"
 import { toast } from "sonner"
+import { getTaskPriorityBadge, getTaskStatusBadge, getTaskStatusIcon, getActivityIcon } from "@/components/badges"
+import { formatDateTime, formatRelativeTime, getInitials, getDuration } from "@/lib/format"
 
-function getPriorityBadge(priority: TaskPriority) {
-  switch (priority) {
-    case "Crítica":
-      return <Badge className="bg-destructive/15 text-destructive border-destructive/30">Crítica</Badge>
-    case "Alta":
-      return <Badge className="bg-warning/15 text-warning border-warning/30">Alta</Badge>
-    case "Média":
-      return <Badge className="bg-info/15 text-info border-info/30">Média</Badge>
-    case "Baixa":
-      return <Badge variant="secondary">Baixa</Badge>
-    default:
-      return <Badge variant="outline">{priority}</Badge>
-  }
-}
-
-function getStatusBadge(status: TaskStatus) {
-  switch (status) {
-    case "Aberta":
-      return <Badge className="bg-info/15 text-info border-info/30">Aberta</Badge>
-    case "Em análise":
-      return <Badge className="bg-warning/15 text-warning border-warning/30">Em análise</Badge>
-    case "Em andamento":
-      return <Badge className="bg-chart-4/15 text-chart-4 border-chart-4/30">Em andamento</Badge>
-    case "Concluída":
-      return <Badge className="bg-success/15 text-success border-success/30">Concluída</Badge>
-    case "Cancelada":
-      return <Badge variant="secondary">Cancelada</Badge>
-    default:
-      return <Badge variant="outline">{status}</Badge>
-  }
-}
-
-function getStatusIcon(status: TaskStatus) {
-  switch (status) {
-    case "Aberta":
-      return <CircleDot className="size-5 text-info" />
-    case "Em análise":
-      return <Search className="size-5 text-warning" />
-    case "Em andamento":
-      return <Loader2 className="size-5 text-chart-4" />
-    case "Concluída":
-      return <CheckCircle2 className="size-5 text-success" />
-    case "Cancelada":
-      return <X className="size-5 text-muted-foreground" />
-  }
-}
-
-function formatDateTime(dateStr: string) {
-  return new Date(dateStr).toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-}
-
-function formatRelativeTime(dateStr: string) {
-  const now = new Date()
-  const date = new Date(dateStr)
-  const diffMs = now.getTime() - date.getTime()
-  const diffMin = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMin / 60)
-  const diffDays = Math.floor(diffHours / 24)
-
-  if (diffMin < 1) return "agora"
-  if (diffMin < 60) return `há ${diffMin}min`
-  if (diffHours < 24) return `há ${diffHours}h`
-  return `há ${diffDays}d`
-}
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter((_, i, arr) => i === 0 || i === arr.length - 1)
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-}
-
-function getDuration(start: string, end: string | null) {
-  if (!end) return null
-  const diffMs = new Date(end).getTime() - new Date(start).getTime()
-  const diffMin = Math.floor(diffMs / 60000)
-  if (diffMin < 60) return `${diffMin} min`
-  const hours = Math.floor(diffMin / 60)
-  const mins = diffMin % 60
-  return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`
-}
-
-function getActivityIcon(action: string) {
-  if (action.includes("Criou")) return <CircleDot className="size-4 text-info" />
-  if (action.includes("Assumiu")) return <UserPlus className="size-4 text-chart-4" />
-  if (action.includes("Atualizou")) return <MessageSquare className="size-4 text-warning" />
-  if (action.includes("Concluiu")) return <CheckCircle2 className="size-4 text-success" />
-  return <MessageSquare className="size-4 text-muted-foreground" />
-}
+const getPriorityBadge = getTaskPriorityBadge
+const getStatusBadge = getTaskStatusBadge
+const getStatusIcon = getTaskStatusIcon
 
 export default function TaskDetailClient({ id }: { id: string }) {
   const task = getTaskRequestById(id)

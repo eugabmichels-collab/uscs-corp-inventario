@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
   Package,
   Search,
@@ -58,6 +59,9 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { mockItems } from "@/lib/mock-data"
 import type { InventoryItem } from "@/lib/types"
+import { getItemStatusBadge, getConservationBadge, getCriticalityBadge } from "@/components/badges"
+import { ItemHistoryDialog } from "@/components/item-history-dialog"
+import { toast } from "sonner"
 
 const categories = [
   "Equipamento de medição",
@@ -77,58 +81,7 @@ const conservationStates = ["Ótimo", "Bom", "Regular", "Ruim", "Inoperante"]
 const usageStatuses = ["Em uso", "Reserva", "Emprestado", "Em manutenção", "Em calibração", "Desativado", "Para descarte"]
 const criticalities = ["Baixa", "Média", "Alta", "Crítica"]
 
-function getStatusBadge(status: string) {
-  switch (status) {
-    case "Em uso":
-      return <Badge className="bg-success/15 text-success border-success/30 hover:bg-success/20">Em uso</Badge>
-    case "Reserva":
-      return <Badge variant="secondary">Reserva</Badge>
-    case "Emprestado":
-      return <Badge className="bg-warning/15 text-warning border-warning/30 hover:bg-warning/20">Emprestado</Badge>
-    case "Em manutenção":
-      return <Badge className="bg-info/15 text-info border-info/30 hover:bg-info/20">Em manutenção</Badge>
-    case "Em calibração":
-      return <Badge className="bg-info/15 text-info border-info/30 hover:bg-info/20">Em calibração</Badge>
-    case "Desativado":
-      return <Badge variant="outline" className="text-muted-foreground">Desativado</Badge>
-    case "Para descarte":
-      return <Badge className="bg-destructive/15 text-destructive border-destructive/30 hover:bg-destructive/20">Para descarte</Badge>
-    default:
-      return <Badge variant="outline">{status}</Badge>
-  }
-}
-
-function getConservationBadge(state: string) {
-  switch (state) {
-    case "Ótimo":
-      return <Badge className="bg-success/15 text-success border-success/30 hover:bg-success/20">Ótimo</Badge>
-    case "Bom":
-      return <Badge className="bg-success/15 text-success border-success/30 hover:bg-success/20">Bom</Badge>
-    case "Regular":
-      return <Badge className="bg-warning/15 text-warning border-warning/30 hover:bg-warning/20">Regular</Badge>
-    case "Ruim":
-      return <Badge className="bg-destructive/15 text-destructive border-destructive/30 hover:bg-destructive/20">Ruim</Badge>
-    case "Inoperante":
-      return <Badge className="bg-destructive/15 text-destructive border-destructive/30 hover:bg-destructive/20">Inoperante</Badge>
-    default:
-      return <Badge variant="outline">{state}</Badge>
-  }
-}
-
-function getCriticalityBadge(criticality: string) {
-  switch (criticality) {
-    case "Crítica":
-      return <Badge className="bg-destructive/15 text-destructive border-destructive/30">Crítica</Badge>
-    case "Alta":
-      return <Badge className="bg-warning/15 text-warning border-warning/30">Alta</Badge>
-    case "Média":
-      return <Badge className="bg-info/15 text-info border-info/30">Média</Badge>
-    case "Baixa":
-      return <Badge variant="secondary">Baixa</Badge>
-    default:
-      return <Badge variant="outline">{criticality}</Badge>
-  }
-}
+const getStatusBadge = getItemStatusBadge
 
 interface Filters {
   search: string
@@ -151,9 +104,12 @@ const initialFilters: Filters = {
 }
 
 export default function InventoryPage() {
+  const router = useRouter()
   const [filters, setFilters] = useState<Filters>(initialFilters)
   const [sortConfig, setSortConfig] = useState<{ key: keyof InventoryItem; direction: "asc" | "desc" } | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
+  const [historyItem, setHistoryItem] = useState<InventoryItem | null>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const itemsPerPage = 10
 
   const filteredItems = useMemo(() => {
@@ -201,8 +157,8 @@ export default function InventoryPage() {
 
     if (sortConfig) {
       result.sort((a, b) => {
-        const aValue = a[sortConfig.key]
-        const bValue = b[sortConfig.key]
+        const aValue = a[sortConfig.key]!
+        const bValue = b[sortConfig.key]!
         if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1
         if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1
         return 0
@@ -568,11 +524,9 @@ export default function InventoryPage() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Ações</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem asChild>
-                                <Link href={`/inventario/${item.id}`}>
-                                  <Eye className="mr-2 size-4" />
-                                  Ver Detalhes
-                                </Link>
+                              <DropdownMenuItem onClick={() => router.push(`/inventario/${item.id}`)}>
+                                <Eye className="mr-2 size-4" />
+                                Ver Detalhes
                               </DropdownMenuItem>
                               <DropdownMenuItem asChild>
                                 <Link href={`/inventario/${item.id}/editar`}>
@@ -581,17 +535,20 @@ export default function InventoryPage() {
                                 </Link>
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem asChild>
-                                <Link href={`/manutencao/nova?item=${item.id}`}>
-                                  <Wrench className="mr-2 size-4" />
-                                  Registrar Manutenção
-                                </Link>
+                              <DropdownMenuItem onClick={() => {
+                                toast.info(`Ordem de manutenção aberta para "${item.name}"`, {
+                                  description: `Item ${item.internalCode} encaminhado para manutenção.`,
+                                })
+                              }}>
+                                <Wrench className="mr-2 size-4" />
+                                Registrar Manutenção
                               </DropdownMenuItem>
-                              <DropdownMenuItem asChild>
-                                <Link href={`/auditoria?item=${item.id}`}>
-                                  <History className="mr-2 size-4" />
-                                  Ver Histórico
-                                </Link>
+                              <DropdownMenuItem onClick={() => {
+                                setHistoryItem(item)
+                                setHistoryOpen(true)
+                              }}>
+                                <History className="mr-2 size-4" />
+                                Ver Histórico
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -639,6 +596,17 @@ export default function InventoryPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Item History Modal */}
+      {historyItem && (
+        <ItemHistoryDialog
+          open={historyOpen}
+          onOpenChange={setHistoryOpen}
+          itemId={historyItem.id}
+          itemCode={historyItem.internalCode}
+          itemName={historyItem.name}
+        />
+      )}
     </>
   )
 }

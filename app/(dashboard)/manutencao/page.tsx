@@ -1,7 +1,10 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import Link from "next/link"
+import { useForm, Controller } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import { useRouter } from "next/navigation"
 import {
   Wrench,
   Search,
@@ -17,6 +20,11 @@ import {
   AlertTriangle,
   Loader2,
   Package,
+  Hash,
+  User,
+  Calendar,
+  FileText,
+  DollarSign,
 } from "lucide-react"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -67,59 +75,25 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { mockMaintenances } from "@/lib/mock-data"
+import type { Maintenance } from "@/lib/types"
+import { getMaintenanceStatusBadge, getCriticalityBadge, getMaintenanceTypeBadge } from "@/components/badges"
+import { formatDate } from "@/lib/format"
+import { toast } from "sonner"
 
-function getStatusBadge(status: string) {
-  switch (status) {
-    case "Aberta":
-      return <Badge className="bg-warning/15 text-warning border-warning/30 hover:bg-warning/20">Aberta</Badge>
-    case "Em andamento":
-      return <Badge className="bg-info/15 text-info border-info/30 hover:bg-info/20">Em andamento</Badge>
-    case "Concluída":
-      return <Badge className="bg-success/15 text-success border-success/30 hover:bg-success/20">Concluída</Badge>
-    case "Aguardando peça":
-      return <Badge className="bg-warning/15 text-warning border-warning/30 hover:bg-warning/20">Aguardando peça</Badge>
-    case "Terceirizada":
-      return <Badge variant="secondary">Terceirizada</Badge>
-    default:
-      return <Badge variant="outline">{status}</Badge>
-  }
-}
+const getStatusBadge = getMaintenanceStatusBadge
+const getTypeBadge = getMaintenanceTypeBadge
 
-function getCriticalityBadge(criticality: string) {
-  switch (criticality) {
-    case "Crítica":
-      return <Badge className="bg-destructive/15 text-destructive border-destructive/30">Crítica</Badge>
-    case "Alta":
-      return <Badge className="bg-warning/15 text-warning border-warning/30">Alta</Badge>
-    case "Média":
-      return <Badge className="bg-info/15 text-info border-info/30">Média</Badge>
-    case "Baixa":
-      return <Badge variant="secondary">Baixa</Badge>
-    default:
-      return <Badge variant="outline">{criticality}</Badge>
-  }
-}
+const newMaintenanceSchema = z.object({
+  item: z.string().min(1, "Selecione um item."),
+  maintenanceType: z.string().min(1, "Selecione o tipo de manutenção."),
+  criticality: z.string().min(1, "Selecione a criticidade."),
+  responsible: z.string().min(1, "Informe o responsável."),
+  supplier: z.string().optional(),
+  problem: z.string().min(1, "Descreva o problema reportado."),
+  cost: z.string().optional(),
+})
 
-function getTypeBadge(type: string) {
-  switch (type) {
-    case "Corretiva":
-      return <Badge className="bg-destructive/15 text-destructive border-destructive/30">Corretiva</Badge>
-    case "Preventiva":
-      return <Badge className="bg-info/15 text-info border-info/30">Preventiva</Badge>
-    case "Calibração":
-      return <Badge className="bg-warning/15 text-warning border-warning/30">Calibração</Badge>
-    case "Inspeção":
-      return <Badge variant="secondary">Inspeção</Badge>
-    case "Avaliação técnica":
-      return <Badge variant="outline">Avaliação técnica</Badge>
-    default:
-      return <Badge variant="outline">{type}</Badge>
-  }
-}
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("pt-BR")
-}
+type NewMaintenanceFormData = z.infer<typeof newMaintenanceSchema>
 
 interface Filters {
   search: string
@@ -136,9 +110,38 @@ const initialFilters: Filters = {
 }
 
 export default function ManutencaoPage() {
+  const router = useRouter()
   const [filters, setFilters] = useState<Filters>(initialFilters)
   const [currentPage, setCurrentPage] = useState(1)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [selectedMaintenance, setSelectedMaintenance] = useState<Maintenance | null>(null)
+  const [detailOpen, setDetailOpen] = useState(false)
   const itemsPerPage = 10
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors },
+  } = useForm<NewMaintenanceFormData>({
+    resolver: zodResolver(newMaintenanceSchema),
+    defaultValues: {
+      item: "",
+      maintenanceType: "",
+      criticality: "",
+      responsible: "",
+      supplier: "",
+      problem: "",
+      cost: "",
+    },
+  })
+
+  const onSubmitMaintenance = (data: NewMaintenanceFormData) => {
+    console.log("Nova ordem de serviço:", data)
+    reset()
+    setDialogOpen(false)
+  }
 
   const filteredMaintenances = useMemo(() => {
     let result = [...mockMaintenances]
@@ -204,7 +207,7 @@ export default function ManutencaoPage() {
               Gerencie ordens de serviço e manutenções dos equipamentos
             </p>
           </div>
-          <Dialog>
+          <Dialog open={dialogOpen} onOpenChange={(open) => { reset(); setDialogOpen(open); }}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 size-4" />
@@ -218,73 +221,108 @@ export default function ManutencaoPage() {
                   Abra uma nova ordem de manutenção para um equipamento.
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="item">Item</Label>
-                  <Select>
-                    <SelectTrigger id="item">
-                      <SelectValue placeholder="Selecione o item" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">LAB-FIS-EQ-001 - Osciloscópio Digital</SelectItem>
-                      <SelectItem value="3">LAB-FIS-EQ-003 - Fonte de Alimentação DC</SelectItem>
-                      <SelectItem value="8">LAB-FAB-IMP3D-001 - Impressora 3D FDM</SelectItem>
-                      <SelectItem value="9">LAB-FIS-FER-001 - Alicate Amperímetro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleSubmit(onSubmitMaintenance)}>
+                <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="mType">Tipo</Label>
-                    <Select>
-                      <SelectTrigger id="mType">
-                        <SelectValue placeholder="Tipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Preventiva">Preventiva</SelectItem>
-                        <SelectItem value="Corretiva">Corretiva</SelectItem>
-                        <SelectItem value="Calibração">Calibração</SelectItem>
-                        <SelectItem value="Inspeção">Inspeção</SelectItem>
-                        <SelectItem value="Avaliação técnica">Avaliação técnica</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="item">Item</Label>
+                    <Controller
+                      control={control}
+                      name="item"
+                      render={({ field }) => (
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger id="item" className={errors.item ? "border-destructive focus-visible:ring-destructive" : ""}>
+                            <SelectValue placeholder="Selecione o item" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">LAB-FIS-EQ-001 - Osciloscópio Digital</SelectItem>
+                            <SelectItem value="3">LAB-FIS-EQ-003 - Fonte de Alimentação DC</SelectItem>
+                            <SelectItem value="8">LAB-FAB-IMP3D-001 - Impressora 3D FDM</SelectItem>
+                            <SelectItem value="9">LAB-FIS-FER-001 - Alicate Amperímetro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.item && <p className="text-sm text-destructive">{errors.item.message}</p>}
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="mType">Tipo</Label>
+                      <Controller
+                        control={control}
+                        name="maintenanceType"
+                        render={({ field }) => (
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <SelectTrigger id="mType" className={errors.maintenanceType ? "border-destructive focus-visible:ring-destructive" : ""}>
+                              <SelectValue placeholder="Tipo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Preventiva">Preventiva</SelectItem>
+                              <SelectItem value="Corretiva">Corretiva</SelectItem>
+                              <SelectItem value="Calibração">Calibração</SelectItem>
+                              <SelectItem value="Inspeção">Inspeção</SelectItem>
+                              <SelectItem value="Avaliação técnica">Avaliação técnica</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      {errors.maintenanceType && <p className="text-sm text-destructive">{errors.maintenanceType.message}</p>}
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="mCriticality">Criticidade</Label>
+                      <Controller
+                        control={control}
+                        name="criticality"
+                        render={({ field }) => (
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <SelectTrigger id="mCriticality" className={errors.criticality ? "border-destructive focus-visible:ring-destructive" : ""}>
+                              <SelectValue placeholder="Criticidade" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Baixa">Baixa</SelectItem>
+                              <SelectItem value="Média">Média</SelectItem>
+                              <SelectItem value="Alta">Alta</SelectItem>
+                              <SelectItem value="Crítica">Crítica</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      {errors.criticality && <p className="text-sm text-destructive">{errors.criticality.message}</p>}
+                    </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="mCriticality">Criticidade</Label>
-                    <Select>
-                      <SelectTrigger id="mCriticality">
-                        <SelectValue placeholder="Criticidade" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Baixa">Baixa</SelectItem>
-                        <SelectItem value="Média">Média</SelectItem>
-                        <SelectItem value="Alta">Alta</SelectItem>
-                        <SelectItem value="Crítica">Crítica</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="responsible">Responsável</Label>
+                    <Input
+                      id="responsible"
+                      placeholder="Nome do responsável"
+                      {...register("responsible")}
+                      className={errors.responsible ? "border-destructive focus-visible:ring-destructive" : ""}
+                    />
+                    {errors.responsible && <p className="text-sm text-destructive">{errors.responsible.message}</p>}
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="supplier">Fornecedor / Técnico</Label>
+                    <Input id="supplier" placeholder="Ex: Manutenção interna" {...register("supplier")} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="problem">Problema Reportado</Label>
+                    <Textarea
+                      id="problem"
+                      placeholder="Descreva o problema..."
+                      {...register("problem")}
+                      className={errors.problem ? "border-destructive focus-visible:ring-destructive" : ""}
+                    />
+                    {errors.problem && <p className="text-sm text-destructive">{errors.problem.message}</p>}
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="cost">Custo Estimado</Label>
+                    <Input id="cost" placeholder="R$ 0,00" {...register("cost")} />
                   </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="responsible">Responsável</Label>
-                  <Input id="responsible" placeholder="Nome do responsável" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="supplier">Fornecedor / Técnico</Label>
-                  <Input id="supplier" placeholder="Ex: Manutenção interna" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="problem">Problema Reportado</Label>
-                  <Textarea id="problem" placeholder="Descreva o problema..." />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="cost">Custo Estimado</Label>
-                  <Input id="cost" placeholder="R$ 0,00" />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline">Cancelar</Button>
-                <Button>Abrir Ordem</Button>
-              </DialogFooter>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => { reset(); setDialogOpen(false); }}>Cancelar</Button>
+                  <Button type="submit">Abrir Ordem</Button>
+                </DialogFooter>
+              </form>
             </DialogContent>
           </Dialog>
         </div>
@@ -491,17 +529,21 @@ export default function ManutencaoPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Ações</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => { setSelectedMaintenance(m); setDetailOpen(true); }}>
                               <Eye className="mr-2 size-4" />
                               Ver detalhes
                             </DropdownMenuItem>
                             {m.status !== "Concluída" && (
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                toast.success(`Ordem "${m.itemCode}" marcada como concluída!`, {
+                                  description: `Manutenção de "${m.itemName}" finalizada.`,
+                                })
+                              }}>
                                 <CheckCircle2 className="mr-2 size-4" />
                                 Marcar como concluída
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push(`/inventario/${m.itemId}`)}>
                               <Package className="mr-2 size-4" />
                               Ver item no inventário
                             </DropdownMenuItem>
@@ -551,6 +593,140 @@ export default function ManutencaoPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Detail Dialog */}
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detalhes da Ordem de Serviço</DialogTitle>
+            <DialogDescription>
+              Informações completas da manutenção
+            </DialogDescription>
+          </DialogHeader>
+          {selectedMaintenance && (
+            <div className="space-y-6 py-4">
+              {/* Status header */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold">{selectedMaintenance.itemName}</p>
+                  <p className="text-sm font-mono text-muted-foreground">{selectedMaintenance.itemCode}</p>
+                </div>
+                {getStatusBadge(selectedMaintenance.status)}
+              </div>
+
+              <Separator />
+
+              {/* Type & Criticality */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Classificação</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-start gap-2">
+                    <Wrench className="size-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Tipo</p>
+                      <div className="mt-0.5">{getTypeBadge(selectedMaintenance.maintenanceType)}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="size-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Criticidade</p>
+                      <div className="mt-0.5">{getCriticalityBadge(selectedMaintenance.criticality)}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Problem */}
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Problema Reportado</h4>
+                <p className="text-sm rounded-md bg-muted/50 p-3">{selectedMaintenance.reportedProblem}</p>
+              </div>
+
+              <Separator />
+
+              {/* Responsible & Supplier */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Responsáveis</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-start gap-2">
+                    <User className="size-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Responsável</p>
+                      <p className="text-sm">{selectedMaintenance.responsible}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <FileText className="size-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Fornecedor / Técnico</p>
+                      <p className="text-sm">{selectedMaintenance.supplierOrTechnician || "—"}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Dates */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Datas</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-start gap-2">
+                    <Calendar className="size-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Abertura</p>
+                      <p className="text-sm">{formatDate(selectedMaintenance.openingDate)}</p>
+                    </div>
+                  </div>
+                  {selectedMaintenance.completedAt && (
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="size-4 text-success mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Concluída em</p>
+                        <p className="text-sm">{formatDate(selectedMaintenance.completedAt)}</p>
+                      </div>
+                    </div>
+                  )}
+                  {selectedMaintenance.estimatedCost && (
+                    <div className="flex items-start gap-2">
+                      <DollarSign className="size-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Custo Estimado</p>
+                        <p className="text-sm">{selectedMaintenance.estimatedCost}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Observations */}
+              {selectedMaintenance.observations && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Observações</h4>
+                    <p className="text-sm rounded-md bg-muted/50 p-3">{selectedMaintenance.observations}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (selectedMaintenance) router.push(`/inventario/${selectedMaintenance.itemId}`)
+              }}
+            >
+              <Package className="mr-2 size-4" />
+              Ver no Inventário
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

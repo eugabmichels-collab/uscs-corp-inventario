@@ -33,39 +33,12 @@ import { Separator } from "@/components/ui/separator"
 import { getLabMapByLab, saveLabMap } from "@/lib/lab-map-service"
 import type { LabMap } from "@/lib/types"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from "recharts"
+import { getItemStatusBadge, getConservationBadge } from "@/components/badges"
 
 const LabMapViewer = dynamic(() => import("@/components/lab-map-viewer").then((m) => m.LabMapViewer), { ssr: false })
 const LabMapEditor = dynamic(() => import("@/components/lab-map-editor").then((m) => m.LabMapEditor), { ssr: false })
 
-function getStatusBadge(status: string) {
-  switch (status) {
-    case "Em uso":
-      return <Badge className="bg-success/15 text-success border-success/30 hover:bg-success/20">Em uso</Badge>
-    case "Emprestado":
-      return <Badge className="bg-warning/15 text-warning border-warning/30 hover:bg-warning/20">Emprestado</Badge>
-    case "Em manutenção":
-      return <Badge className="bg-info/15 text-info border-info/30 hover:bg-info/20">Em manutenção</Badge>
-    case "Reserva":
-      return <Badge variant="secondary">Reserva</Badge>
-    default:
-      return <Badge variant="outline">{status}</Badge>
-  }
-}
-
-function getConservationBadge(state: string) {
-  switch (state) {
-    case "Ótimo":
-      return <Badge className="bg-success/15 text-success border-success/30">Ótimo</Badge>
-    case "Bom":
-      return <Badge className="bg-success/15 text-success border-success/30">Bom</Badge>
-    case "Regular":
-      return <Badge className="bg-warning/15 text-warning border-warning/30">Regular</Badge>
-    case "Ruim":
-      return <Badge className="bg-destructive/15 text-destructive border-destructive/30">Ruim</Badge>
-    default:
-      return <Badge variant="outline">{state}</Badge>
-  }
-}
+const getStatusBadge = getItemStatusBadge
 
 const LAB_NAME = "Laboratório de Física" as const
 

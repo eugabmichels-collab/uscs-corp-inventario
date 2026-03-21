@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import {
@@ -32,71 +33,14 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { getItemById, mockAuditLogs, mockLoans, mockMaintenances } from "@/lib/mock-data"
+import { getItemStatusBadge, getConservationBadge, getCriticalityBadge } from "@/components/badges"
+import { InfoRow } from "@/components/ui/info-row"
+import { ItemHistoryDialog } from "@/components/item-history-dialog"
 
-function getStatusBadge(status: string) {
-  switch (status) {
-    case "Em uso":
-      return <Badge className="bg-success/15 text-success border-success/30">Em uso</Badge>
-    case "Reserva":
-      return <Badge variant="secondary">Reserva</Badge>
-    case "Emprestado":
-      return <Badge className="bg-warning/15 text-warning border-warning/30">Emprestado</Badge>
-    case "Em manutenção":
-      return <Badge className="bg-info/15 text-info border-info/30">Em manutenção</Badge>
-    case "Em calibração":
-      return <Badge className="bg-info/15 text-info border-info/30">Em calibração</Badge>
-    case "Desativado":
-      return <Badge variant="outline" className="text-muted-foreground">Desativado</Badge>
-    case "Para descarte":
-      return <Badge className="bg-destructive/15 text-destructive border-destructive/30">Para descarte</Badge>
-    default:
-      return <Badge variant="outline">{status}</Badge>
-  }
-}
-
-function getConservationBadge(state: string) {
-  switch (state) {
-    case "Ótimo":
-    case "Bom":
-      return <Badge className="bg-success/15 text-success border-success/30">{state}</Badge>
-    case "Regular":
-      return <Badge className="bg-warning/15 text-warning border-warning/30">{state}</Badge>
-    case "Ruim":
-    case "Inoperante":
-      return <Badge className="bg-destructive/15 text-destructive border-destructive/30">{state}</Badge>
-    default:
-      return <Badge variant="outline">{state}</Badge>
-  }
-}
-
-function getCriticalityBadge(criticality: string) {
-  switch (criticality) {
-    case "Crítica":
-      return <Badge className="bg-destructive/15 text-destructive border-destructive/30">Crítica</Badge>
-    case "Alta":
-      return <Badge className="bg-warning/15 text-warning border-warning/30">Alta</Badge>
-    case "Média":
-      return <Badge className="bg-info/15 text-info border-info/30">Média</Badge>
-    case "Baixa":
-      return <Badge variant="secondary">Baixa</Badge>
-    default:
-      return <Badge variant="outline">{criticality}</Badge>
-  }
-}
-
-function InfoRow({ label, value, icon: Icon }: { label: string; value: React.ReactNode; icon?: React.ComponentType<{ className?: string }> }) {
-  return (
-    <div className="flex items-start gap-3 py-3">
-      {Icon && <Icon className="size-5 text-muted-foreground mt-0.5" />}
-      <div className="space-y-1">
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="font-medium">{value}</p>
-      </div>
-    </div>
-  )
-}
+const getStatusBadge = getItemStatusBadge
 
 export default function ItemDetailClient({ id }: { id: string }) {
+  const [historyOpen, setHistoryOpen] = useState(false)
   const item = getItemById(id)
 
   if (!item) {
@@ -534,11 +478,9 @@ export default function ItemDetailClient({ id }: { id: string }) {
                     Registrar Manutenção
                   </Link>
                 </Button>
-                <Button variant="outline" className="w-full justify-start" asChild>
-                  <Link href={`/auditoria?item=${id}`}>
-                    <History className="mr-2 size-4" />
-                    Ver Histórico Completo
-                  </Link>
+                <Button variant="outline" className="w-full justify-start" onClick={() => setHistoryOpen(true)}>
+                  <History className="mr-2 size-4" />
+                  Ver Histórico Completo
                 </Button>
               </CardContent>
             </Card>
@@ -569,6 +511,14 @@ export default function ItemDetailClient({ id }: { id: string }) {
           </div>
         </div>
       </div>
+
+      <ItemHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        itemId={id}
+        itemCode={item.internalCode}
+        itemName={item.name}
+      />
     </>
   )
 }
