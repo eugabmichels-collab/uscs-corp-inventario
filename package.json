@@ -8,7 +8,7 @@
     "prestart": "pnpm build",
     "start": "pnpm dlx serve out",
     "preview": "pnpm dlx serve out",
-    "lint": "next lint"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -68,6 +68,8 @@
     "@types/node": "^22",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "16.1.6",
     "postcss": "^8.5",
     "prettier": "^3.9.9",
     "tailwindcss": "^4.2.0",
