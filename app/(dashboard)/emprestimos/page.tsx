@@ -11,7 +11,6 @@ import {
   Filter,
   Plus,
   Eye,
-  MoreHorizontal,
   ChevronLeft,
   ChevronRight,
   X,
@@ -26,6 +25,7 @@ import {
   FileText,
   Hash,
 } from "lucide-react"
+import { TableActionsMenu, TableActionsMenuContent, TableActionsMenuTrigger } from "@/components/table-actions-menu";
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -39,12 +39,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
   Select,
@@ -559,31 +555,26 @@ export default function EmprestimosPage() {
                       <TableCell>{formatDate(loan.expectedReturnDate)}</TableCell>
                       <TableCell>{getStatusBadge(loan.status)}</TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-8">
-                              <MoreHorizontal className="size-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
+                        <TableActionsMenu>
+                          <TableActionsMenuTrigger label={loan.itemName} />
+                          <TableActionsMenuContent>
                             <DropdownMenuItem onClick={() => openDetail(loan)}>
-                              <Eye className="mr-2 size-4" />
+                              <Eye className="size-4" />
                               Ver detalhes
                             </DropdownMenuItem>
                             {loan.status !== "Devolvido" && (
                               <DropdownMenuItem onClick={() => openReturn(loan)}>
-                                <Undo2 className="mr-2 size-4" />
+                                <Undo2 className="size-4" />
                                 Registrar devolução
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => router.push(`/inventario/${loan.itemId}`)}>
-                              <ClipboardList className="mr-2 size-4" />
+                              <ClipboardList className="size-4" />
                               Ver item no inventário
                             </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                          </TableActionsMenuContent>
+                        </TableActionsMenu>
                       </TableCell>
                     </TableRow>
                   ))
