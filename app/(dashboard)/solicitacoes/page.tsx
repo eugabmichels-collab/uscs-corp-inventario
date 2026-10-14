@@ -11,7 +11,6 @@ import {
   Filter,
   Plus,
   Eye,
-  MoreHorizontal,
   X,
   Clock,
   CheckCircle2,
@@ -27,6 +26,7 @@ import {
   Bot,
   Image,
 } from "lucide-react"
+import { TableActionsMenu, TableActionsMenuContent, TableActionsMenuTrigger } from "@/components/table-actions-menu";
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -42,12 +42,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
   Select,
@@ -617,18 +612,12 @@ export default function SolicitacoesPage() {
                           <div className="text-xs text-muted-foreground">{formatDateTime(task.createdAt)}</div>
                         </TableCell>
                         <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="size-8">
-                                <MoreHorizontal className="size-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
+                          <TableActionsMenu>
+                            <TableActionsMenuTrigger label={task.title} />
+                            <TableActionsMenuContent>
                               <DropdownMenuItem asChild>
                                 <Link href={`/solicitacoes/${task.id}`}>
-                                  <Eye className="mr-2 size-4" />
+                                  <Eye className="size-4" />
                                   Ver detalhes
                                 </Link>
                               </DropdownMenuItem>
@@ -638,12 +627,12 @@ export default function SolicitacoesPage() {
                                     description: "Agora você é o responsável por esta solicitação.",
                                   })
                                 }}>
-                                  <UserPlus className="mr-2 size-4" />
+                                  <UserPlus className="size-4" />
                                   Assumir solicitação
                                 </DropdownMenuItem>
                               )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                            </TableActionsMenuContent>
+                          </TableActionsMenu>
                         </TableCell>
                       </TableRow>
                     ))

@@ -291,3 +291,66 @@ export interface DashboardStats {
   withoutPatrimony: number
   recentMovements: number
 }
+
+// Inventário de campo (modelo definido para os laboratórios de Física e Robótica)
+export type InventoryLab = "Fisica" | "Robotica"
+export type UnitInventoryStatus = "Nao conferido" | "Completo" | "Incompleto" | "Danificado" | "Indisponivel"
+export type ComponentStatus = "Nao conferido" | "OK" | "Falta" | "Danificado"
+export type ComponentGroup = "Composicao principal" | "Acessorio opcional" | "Subconjunto eletronico"
+export type ComponentRequirement = "Principal" | "Vendido separadamente" | "Nao fornecido"
+export type ComponentUnit = "UN" | "CET" | "KIT" | "CONJ" | "PAR"
+
+export interface KitComponentTemplate {
+  item: string
+  group: ComponentGroup
+  subgroup?: string
+  componentCode?: string
+  description: string
+  expectedQuantity: number
+  unitOfMeasure: ComponentUnit
+  requirement: ComponentRequirement
+}
+
+export interface KitCatalog {
+  code: string
+  name: string
+  lab: InventoryLab
+  area: string
+  subarea?: string
+  manufacturerCode?: string
+  manufacturer?: string
+  manual?: string
+  expectedComponentCount: number
+  components: KitComponentTemplate[]
+  archived?: boolean
+}
+
+export interface InventoryComponent extends KitComponentTemplate {
+  unitId: string
+  foundQuantity: number | null
+  status: ComponentStatus
+  observations?: string
+}
+
+export interface InventoryUnit {
+  id: string
+  lab: InventoryLab
+  kitCode: string
+  unitNumber: string
+  kitName: string
+  area: string
+  subarea?: string
+  address: string
+  patrimony?: string
+  manufacturerCode?: string
+  manual?: string
+  manufacturer?: string
+  status: UnitInventoryStatus
+  verifiedAt?: string
+  verifiedBy?: string
+  observations?: string
+  components: InventoryComponent[]
+  extraData?: Record<string, string | number | boolean>
+  createdAt: string
+  updatedAt: string
+}

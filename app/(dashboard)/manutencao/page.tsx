@@ -11,7 +11,6 @@ import {
   Filter,
   Plus,
   Eye,
-  MoreHorizontal,
   ChevronLeft,
   ChevronRight,
   X,
@@ -26,6 +25,7 @@ import {
   FileText,
   DollarSign,
 } from "lucide-react"
+import { TableActionsMenu, TableActionsMenuContent, TableActionsMenuTrigger } from "@/components/table-actions-menu";
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -40,12 +40,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
   Select,
@@ -520,17 +516,11 @@ export default function ManutencaoPage() {
                       <TableCell>{getCriticalityBadge(m.criticality)}</TableCell>
                       <TableCell>{getStatusBadge(m.status)}</TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-8">
-                              <MoreHorizontal className="size-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
+                        <TableActionsMenu>
+                          <TableActionsMenuTrigger label={m.itemName} />
+                          <TableActionsMenuContent>
                             <DropdownMenuItem onClick={() => { setSelectedMaintenance(m); setDetailOpen(true); }}>
-                              <Eye className="mr-2 size-4" />
+                              <Eye className="size-4" />
                               Ver detalhes
                             </DropdownMenuItem>
                             {m.status !== "Concluída" && (
@@ -539,16 +529,17 @@ export default function ManutencaoPage() {
                                   description: `Manutenção de "${m.itemName}" finalizada.`,
                                 })
                               }}>
-                                <CheckCircle2 className="mr-2 size-4" />
+                                <CheckCircle2 className="size-4" />
                                 Marcar como concluída
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => router.push(`/inventario/${m.itemId}`)}>
-                              <Package className="mr-2 size-4" />
+                              <Package className="size-4" />
                               Ver item no inventário
                             </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                          </TableActionsMenuContent>
+                        </TableActionsMenu>
                       </TableCell>
                     </TableRow>
                   ))

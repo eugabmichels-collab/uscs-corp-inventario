@@ -1,0 +1,13 @@
+import nextCoreWebVitals from "eslint-config-next/core-web-vitals"
+import nextTypeScript from "eslint-config-next/typescript"
+
+export default [
+  ...nextCoreWebVitals,
+  ...nextTypeScript,
+  {
+    rules: {
+      "react-hooks/purity": "warn",
+      "react-hooks/set-state-in-effect": "warn",
+    },
+  },
+]
