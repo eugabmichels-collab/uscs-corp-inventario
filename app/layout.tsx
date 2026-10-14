@@ -3,6 +3,12 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
+function publicAssetPath(path: string) {
+  return `${basePath}${path}`;
+}
+
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
@@ -14,19 +20,19 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: "/icon-uscs-32x32.png",
+        url: publicAssetPath("/icon-uscs-32x32.png"),
         media: "(prefers-color-scheme: light)",
       },
       {
-        url: "/icon-uscs-32x32.png",
+        url: publicAssetPath("/icon-uscs-32x32.png"),
         media: "(prefers-color-scheme: dark)",
       },
       {
-        url: "/icon-uscs.svg",
+        url: publicAssetPath("/icon-uscs.svg"),
         type: "image/svg+xml",
       },
     ],
-    apple: "/uscs-icon.png",
+    apple: publicAssetPath("/uscs-icon.png"),
   },
 };
 
