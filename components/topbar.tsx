@@ -1,9 +1,10 @@
-"use client"
+"use client";
 
-import React from "react"
-import { Bell, Search } from "lucide-react"
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { Separator } from "@/components/ui/separator"
+import React from "react";
+import Link from "next/link";
+import { Bell, Search } from "lucide-react";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Separator } from "@/components/ui/separator";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -11,9 +12,9 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,11 +22,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 interface TopbarProps {
-  breadcrumbs: { label: string; href?: string }[]
+  breadcrumbs: { label: string; href?: string }[];
 }
 
 export function Topbar({ breadcrumbs }: TopbarProps) {
@@ -39,10 +40,12 @@ export function Topbar({ breadcrumbs }: TopbarProps) {
           {breadcrumbs.map((crumb, index) => (
             <React.Fragment key={index}>
               <BreadcrumbItem>
-                {index < breadcrumbs.length - 1 ? (
-                  <BreadcrumbLink href={crumb.href || "#"}>
-                    {crumb.label}
+                {index < breadcrumbs.length - 1 && crumb.href ? (
+                  <BreadcrumbLink asChild>
+                    <Link href={crumb.href}>{crumb.label}</Link>
                   </BreadcrumbLink>
+                ) : index < breadcrumbs.length - 1 ? (
+                  <span>{crumb.label}</span>
                 ) : (
                   <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
                 )}
@@ -98,5 +101,5 @@ export function Topbar({ breadcrumbs }: TopbarProps) {
         </DropdownMenu>
       </div>
     </header>
-  )
+  );
 }
