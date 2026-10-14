@@ -1,16 +1,22 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { Eye, EyeOff, GraduationCap } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Eye, EyeOff, GraduationCap } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 const loginSchema = z.object({
   email: z
@@ -18,20 +24,21 @@ const loginSchema = z.object({
     .min(1, "O e-mail é obrigatório.")
     .email("Informe um e-mail válido.")
     .refine(
-      (val) => val.endsWith("@uscs.edu.br") || val.endsWith("@uscsscs.edu.br"),
-      "Utilize seu e-mail institucional (@uscs.edu.br)."
+      (val) =>
+        val.endsWith("@uscs.edu.br") || val.endsWith("@uscsonline.com.br"),
+      "Utilize seu e-mail institucional (@uscs.edu.br ou @uscsonline.com.br).",
     ),
   password: z
     .string()
     .min(1, "A senha é obrigatória.")
     .min(6, "A senha deve ter no mínimo 6 caracteres."),
-})
+});
 
-type LoginFormData = z.infer<typeof loginSchema>
+type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [showPassword, setShowPassword] = useState(false)
+  const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -40,13 +47,21 @@ export default function LoginPage() {
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
-  })
+  });
 
   const onSubmit = async (data: LoginFormData) => {
     // Simulate login
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    router.push("/dashboard")
-  }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    localStorage.setItem(
+      "uscs-session",
+      JSON.stringify({
+        email: data.email,
+        role: "Administrador",
+        loggedAt: new Date().toISOString(),
+      }),
+    );
+    router.push("/dashboard");
+  };
 
   return (
     <div className="min-h-screen flex">
@@ -80,11 +95,15 @@ export default function LoginPage() {
             <div className="grid grid-cols-2 gap-4 max-w-md">
               <div className="rounded-lg bg-primary-foreground/10 p-4 backdrop-blur">
                 <p className="text-3xl font-bold">250+</p>
-                <p className="text-sm text-primary-foreground/80">Itens cadastrados</p>
+                <p className="text-sm text-primary-foreground/80">
+                  Itens cadastrados
+                </p>
               </div>
               <div className="rounded-lg bg-primary-foreground/10 p-4 backdrop-blur">
                 <p className="text-3xl font-bold">2</p>
-                <p className="text-sm text-primary-foreground/80">Laboratórios</p>
+                <p className="text-sm text-primary-foreground/80">
+                  Laboratórios
+                </p>
               </div>
             </div>
           </div>
@@ -131,7 +150,9 @@ export default function LoginPage() {
                     {...register("email")}
                   />
                   {errors.email && (
-                    <p className="text-sm text-destructive">{errors.email.message}</p>
+                    <p className="text-sm text-destructive">
+                      {errors.email.message}
+                    </p>
                   )}
                 </div>
 
@@ -172,7 +193,9 @@ export default function LoginPage() {
                     </Button>
                   </div>
                   {errors.password && (
-                    <p className="text-sm text-destructive">{errors.password.message}</p>
+                    <p className="text-sm text-destructive">
+                      {errors.password.message}
+                    </p>
                   )}
                 </div>
 
@@ -213,5 +236,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
